@@ -1,0 +1,12 @@
+[project]
+name = "reward_rl"
+version = "0.1.0"
+description = "Reward Model Design for Long-Horizon Agent Planning (SingleCore Labs)"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["reward_rl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

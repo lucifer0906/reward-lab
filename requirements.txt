@@ -1,0 +1,12 @@
+# Pinned versions (founder spec Section 23: reproducibility).
+# Verified locally on Python 3.13.7, Windows, CPU-only.
+# On Colab: Colab ships its own torch build; install the rest with
+#   pip install -r requirements.txt --no-deps  (or drop the torch line)
+gymnasium==1.4.0
+stable-baselines3==2.9.0
+torch==2.13.0
+numpy==2.3.3
+PyYAML==6.0.3
+pandas==2.3.3
+matplotlib==3.10.6
+pytest==8.4.2

@@ -1,0 +1,16 @@
+# Base Key-Door-Chain layout: 3 sequential key->door pairs, FIXED layout.
+# Used for ALL core experiments (1-7). Do not edit once training starts --
+# the environment is the experimental control (founder spec Section 3).
+#
+# Legend: # wall | . floor | S start | G goal | a,b,c keys | A,B,C doors
+# Key 'a' sits in a dead-end corner: fetching it has no visible benefit
+# until door A is reached (Section 4: "early actions with no immediate benefit").
+# Optimal solution length (BFS): 26 steps.
+name: base_3keys
+max_steps: 100
+layout:
+  - "#################"
+  - "#S..#...#...#..G#"
+  - "#...A.b.B...C...#"
+  - "#a..#...#.c.#...#"
+  - "#################"
