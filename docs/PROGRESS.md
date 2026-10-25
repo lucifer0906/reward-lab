@@ -44,3 +44,45 @@ ThreadPoolExecutor runner, subprocess UTF-8 environment setup, UTF-8 decoding,
 and ASCII queue messages because they are required for the repair. No
 documented prior edit was reverted: none was extraneous to the runner or
 encoding fix.
+
+## Stage 4 Full Matrix - 2026-10-25
+
+Stage 4 is complete. Ran the full controlled matrix: four reward formulations
+by five seeds (0 through 4), 200,000 timesteps per run, three CPU workers, and
+one torch/BLAS thread per worker. All 20 queue jobs completed with status
+`ok`. The shared 200,000-step budget was selected because the pilot's sparse
+seed 42 had not learned at 100,000 steps, while the prior sparse baseline had
+required 200,000 steps.
+
+### Core results
+
+Whole-training ground-truth success rate (mean +/- standard deviation):
+
+- Sparse: 38.4% +/- 47.1%; 2 of 5 seeds reached 90% success.
+- Dense: 96.8% +/- 0.7%; 5 of 5 seeds reached 90% success.
+- Potential: 75.5% +/- 37.9%; 4 of 5 seeds reached 90% success.
+- Hybrid: 95.5% +/- 1.9%; 5 of 5 seeds reached 90% success.
+
+Mean steps to 90% success among seeds that reached it: sparse 32,500 (2/5),
+dense 22,432 (5/5), potential 28,778 (4/5), and hybrid 20,000 (5/5).
+Normalized ground-truth success AUC: sparse 0.343, dense 0.892, potential
+0.666, hybrid 0.869. Dense is the most stable formulation; hybrid has the
+fastest threshold crossings but seed 0 collapsed from successful behavior to a
+0% final logged rolling success rate. Sparse and potential also have failed
+learning seeds, so aggregate means must be reported with variance rather than
+only their successful seeds.
+
+Saved five-seed mean +/- standard deviation plots and machine-readable results
+under `runs/stage4_analysis/`:
+
+- `stage4_success_rate.png`
+- `stage4_invalid_action_rate.png`
+- `stage4_subgoal_completion_rate.png`
+- `stage4_metrics.json`
+- `stage4_summary.csv`
+
+Added `reward_rl.visualization.aggregate_stage4`, which reads only logged
+ground-truth evaluator metrics for success, computes per-seed threshold
+crossings and normalized AUC, and writes the aggregate plots and CSV. No PPO
+hyperparameters, reward definitions, environment dynamics, or ground-truth
+success evaluator logic were changed.
