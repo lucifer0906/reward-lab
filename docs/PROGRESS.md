@@ -86,3 +86,44 @@ ground-truth evaluator metrics for success, computes per-seed threshold
 crossings and normalized AUC, and writes the aggregate plots and CSV. No PPO
 hyperparameters, reward definitions, environment dynamics, or ground-truth
 success evaluator logic were changed.
+
+## Stage 5 Reward-Hacking Stress Tests - 2026-10-25
+
+Stage 5 is complete. Added and ran a reproducible audit against the actual
+dense and hybrid reward configurations. The audit constructs adversarial
+scripted trajectories, accumulates the real reward components, and judges
+every result only through the unchanged reward-blind evaluator.
+
+Three distinct stress scenarios were tested, each with a genuine successful
+control trajectory:
+
+- Repeated subgoal attempts: pick a key or open a door once, then repeat the
+  interaction through timeout. Neither reward re-pays the completed event;
+  repeated interactions are invalid and receive the configured penalty.
+- Movement oscillation: move back and forth for the full episode with no net
+  progress. Dense receives zero reward and hybrid receives -0.60 from its
+  step cost and timeout penalty. Neither formulation pays for motion alone.
+- Incomplete progress: complete each increasing prefix of keys and doors,
+  then use valid neutral movement instead of reaching the goal. The final
+  prefix completes all six intermediate subgoals but still fails ground-truth
+  success. It earns +1.50 dense proxy reward and +1.01 hybrid proxy reward,
+  demonstrating that intermediate reward can diverge from completion.
+
+Across all audit episodes, proxy reward versus true success was correlated but
+not identical: dense Pearson r=0.590 and Spearman rho=0.679; hybrid Pearson
+r=0.699 and Spearman rho=0.679. The audit therefore finds no repeat-event or
+oscillation farming vulnerability in the implemented rewards, but it records
+the residual partial-progress proxy risk and keeps the ground-truth evaluator
+as the required selection metric.
+
+Saved outputs under `runs/stage5_reward_hacking/`:
+
+- `repeated_subgoal_attempt_proxy_vs_success.png`
+- `movement_oscillation_proxy_vs_success.png`
+- `incomplete_progress_proxy_vs_success.png`
+- `audit_results.json`
+- `audit_episodes.csv`
+
+Added `reward_rl.analysis.reward_hacking_audit` to regenerate the analysis.
+The test suite remains 82 passed. No environment dynamics, PPO
+hyperparameters, reward configuration, or success evaluator logic changed.
