@@ -12,10 +12,12 @@ from typing import Any
 from reward_rl.envs.key_door_env import RewardFn
 from reward_rl.rewards.dense import DenseReward
 from reward_rl.rewards.hybrid import HybridReward
+from reward_rl.rewards.naive_distance import NaiveDistanceReward
 from reward_rl.rewards.potential import PotentialReward
+from reward_rl.rewards.potential_distance import PotentialDistanceReward
 from reward_rl.rewards.sparse import SparseReward
 
-AVAILABLE_TYPES = ("sparse", "dense", "potential", "hybrid")
+AVAILABLE_TYPES = ("sparse", "dense", "potential", "hybrid", "naive_distance", "potential_distance")
 
 
 def make_reward(reward_cfg: dict[str, Any], max_steps: int = 100) -> RewardFn:
@@ -71,6 +73,23 @@ def make_reward(reward_cfg: dict[str, Any], max_steps: int = 100) -> RewardFn:
             use_potential=params.get("use_potential", True),
             success_reward=params.get("success_reward", 1.0),
             timeout_penalty=params.get("timeout_penalty", -0.1),
+            max_steps=max_steps,
+        )
+
+    if rtype == "naive_distance":
+        return NaiveDistanceReward(
+            distance_decrease_reward=params.get("distance_decrease_reward", 0.1),
+            success_reward=params.get("success_reward", 1.0),
+            timeout_penalty=params.get("timeout_penalty", 0.0),
+            max_steps=max_steps,
+        )
+
+    if rtype == "potential_distance":
+        return PotentialDistanceReward(
+            gamma=params.get("gamma", 1.0),
+            distance_scale=params.get("distance_scale", 0.1),
+            success_reward=params.get("success_reward", 1.0),
+            timeout_penalty=params.get("timeout_penalty", 0.0),
             max_steps=max_steps,
         )
 

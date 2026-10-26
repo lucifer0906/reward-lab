@@ -22,6 +22,7 @@ from scipy.stats import pearsonr, spearmanr
 from reward_rl.envs.dynamics import Action, GridState, StepEvents, transition
 from reward_rl.envs.key_door_env import KeyDoorChainEnv, load_env_config
 from reward_rl.envs.layout import Layout, parse_layout
+from reward_rl.rewards.distance_common import distance_to_next_target
 from reward_rl.rewards import make_reward
 from reward_rl.training.train import load_config
 
@@ -31,6 +32,7 @@ REWARD_CONFIGS = {"dense": "configs/dense.yaml", "hybrid": "configs/hybrid.yaml"
 SCENARIOS = (
     "repeated_subgoal_attempt",
     "movement_oscillation",
+    "distance_oscillation",
     "incomplete_progress",
 )
 
@@ -126,6 +128,33 @@ def cycle_actions(layout: Layout, max_steps: int) -> list[int]:
     return fill_with_neutral_moves(layout, [], max_steps)
 
 
+def distance_oscillation_actions(layout: Layout, max_steps: int) -> list[int]:
+    """Cycle one step closer to the target and one step away without progress."""
+    state = GridState(
+        agent_pos=layout.start,
+        keys_held=(False,) * layout.num_pairs,
+        keys_collected=(False,) * layout.num_pairs,
+        doors_open=(False,) * layout.num_pairs,
+    )
+    reverse = {
+        Action.UP: Action.DOWN,
+        Action.DOWN: Action.UP,
+        Action.LEFT: Action.RIGHT,
+        Action.RIGHT: Action.LEFT,
+    }
+    start_distance = distance_to_next_target(state, layout)
+    for action, back in reverse.items():
+        middle, event = transition(layout, state, int(action))
+        end, back_event = transition(layout, middle, int(back))
+        if (
+            event.valid and back_event.valid and end.search_key() == state.search_key()
+            and distance_to_next_target(middle, layout) < start_distance
+        ):
+            pair = [int(action), int(back)]
+            return (pair * ((max_steps + 1) // 2))[:max_steps]
+    raise RuntimeError("No distance-decreasing reversible pair found")
+
+
 def scenario_trajectories(layout: Layout, max_steps: int) -> dict[str, list[dict]]:
     """Build three exploit attempts plus a genuine-success control per scenario."""
     solution = solve_actions(layout, max_steps)
@@ -156,6 +185,11 @@ def scenario_trajectories(layout: Layout, max_steps: int) -> dict[str, list[dict
     base_cycle = cycle_actions(layout, max_steps)
     oscillation.append({"case": "cycle_for_full_episode", "actions": base_cycle})
 
+    distance_oscillation = [{
+        "case": "distance_decrease_then_retreat_for_full_episode",
+        "actions": distance_oscillation_actions(layout, max_steps),
+    }]
+
     incomplete = []
     for number, end_index in enumerate(progress_indices, start=1):
         incomplete.append({
@@ -167,6 +201,7 @@ def scenario_trajectories(layout: Layout, max_steps: int) -> dict[str, list[dict
     return {
         "repeated_subgoal_attempt": repeated + [control],
         "movement_oscillation": oscillation + [control],
+        "distance_oscillation": distance_oscillation + [control],
         "incomplete_progress": incomplete + [control],
     }
 
@@ -213,7 +248,8 @@ def correlation(values: list[float], successes: list[float]) -> dict[str, float]
 def plot_scenario(rows: list[dict], scenario: str, output_dir: Path) -> None:
     """Plot actual proxy reward against reward-blind success for one exploit."""
     figure, axis = plt.subplots(figsize=(8, 5))
-    for reward_type, color in (("dense", "tab:blue"), ("hybrid", "tab:orange")):
+    colors = ("tab:blue", "tab:orange", "tab:green", "tab:red")
+    for reward_type, color in zip(sorted({row["reward_type"] for row in rows}), colors):
         subset = [row for row in rows if row["scenario"] == scenario and row["reward_type"] == reward_type]
         x_values = [row["proxy_return"] for row in subset]
         y_values = [float(row["success"]) for row in subset]
@@ -234,7 +270,20 @@ def plot_scenario(rows: list[dict], scenario: str, output_dir: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Stage 5 reward-hacking stress tests")
     parser.add_argument("--output-dir", type=Path, default=REPO_ROOT / "runs" / "stage5_reward_hacking")
+    parser.add_argument(
+        "--reward-config", action="append", default=None, metavar="NAME=PATH",
+        help="Reward config to audit; repeatable. Defaults to dense and hybrid.",
+    )
     args = parser.parse_args()
+
+    reward_configs = REWARD_CONFIGS
+    if args.reward_config:
+        reward_configs = {}
+        for item in args.reward_config:
+            name, separator, path = item.partition("=")
+            if not separator or not name or not path:
+                raise ValueError("--reward-config must use NAME=PATH")
+            reward_configs[name] = path
 
     env_config = load_env_config(REPO_ROOT / "configs" / "env" / "base_3keys.yaml")
     layout = parse_layout(env_config["layout"], name=env_config["name"])
@@ -242,7 +291,7 @@ def main() -> None:
     trajectories = scenario_trajectories(layout, max_steps)
     rows: list[dict] = []
 
-    for reward_type, config_path in REWARD_CONFIGS.items():
+    for reward_type, config_path in reward_configs.items():
         reward_config = load_config(config_path)["reward"]
         for scenario, cases in trajectories.items():
             for case in cases:
@@ -255,7 +304,7 @@ def main() -> None:
                 })
 
     summary: dict[str, dict] = {}
-    for reward_type in REWARD_CONFIGS:
+    for reward_type in reward_configs:
         reward_rows = [row for row in rows if row["reward_type"] == reward_type]
         values = [row["proxy_return"] for row in reward_rows]
         successes = [float(row["success"]) for row in reward_rows]

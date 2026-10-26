@@ -46,7 +46,9 @@ def test_factory_passes_max_steps():
 
 def test_all_types_listed():
     """AVAILABLE_TYPES matches the actual implementations."""
-    assert set(AVAILABLE_TYPES) == {"sparse", "dense", "potential", "hybrid"}
+    assert set(AVAILABLE_TYPES) == {
+        "sparse", "dense", "potential", "hybrid", "naive_distance", "potential_distance",
+    }
 
 
 def test_all_rewards_have_reset():

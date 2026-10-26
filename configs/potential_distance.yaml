@@ -1,0 +1,35 @@
+# Stage 5b control. PPO settings intentionally match Stage 4 exactly.
+meta:
+  name: potential_distance
+  description: "Control: potential difference over the same next-target distance"
+  seeds: [0, 1, 2, 3, 4]
+
+env:
+  config: configs/env/base_3keys.yaml
+
+reward:
+  type: potential_distance
+  # gamma=1 makes any fixed-target forward/backward loop telescope to zero.
+  # PPO gamma remains 0.99, unchanged from every existing reward experiment.
+  gamma: 1.0
+  distance_scale: 0.1
+  success_reward: 1.0
+  timeout_penalty: 0.0
+
+training:
+  total_timesteps: 200000
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  net_arch: [64, 64]
+  eval_freq: 5000
+  n_eval_episodes: 20
+  checkpoint_freq: 10000
+  log_freq: 1000
