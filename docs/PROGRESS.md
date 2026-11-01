@@ -287,3 +287,81 @@ failed-episode action JSON, and a collapsed-policy GIF. The collapsed replays fo
 dense seed 3, hybrid seed 4, and potential seed 9 all complete six subgoals then
 loop rather than taking the final route to the goal. Full claims, Phi conventions,
 weight-sweep context, and caveats are in `docs/FINDINGS.md`.
+
+## Stage 7 Horizon Scaling Calibration and Matrix Plan - 2026-11-01
+
+No matrix training was started in this planning pass. All three dense seed-0
+calibration markers are full 1,000,000-step runs, not the earlier 10,000-step
+throughput test: each matching `results.json` and `completion.json` records
+1,000,000 steps. The h100 gate passes: rolling ground-truth success first
+reached 90% at 25,000 steps (then 99% at 26,624).
+
+H10 has two key-door pairs and is short because it has fewer pairs (11-step
+solution). H50 has five pairs and is lengthened mainly by corridors (51 steps).
+H100 has six pairs and is lengthened by both one additional pair and much
+longer corridors (102 steps). Therefore H100 is not limited by pair count.
+
+Dense seed-0 first reached 90% at h50=18,432 and h100=25,000 rolling steps.
+H10 never reached 90% during its 1,000,000-step calibration (last rolling
+success 78%), so its conservative budget is the 1,000,000 cap. Per-horizon
+budgets are shared by sparse, dense, potential, and hybrid. Dense h10 seed-0
+can be reused because its calibration exactly equals its final budget. Dense
+h50 and h100 cannot be reused because neither has a checkpoint at the planned
+budget (55,296 and 75,000 respectively).
+
+| Horizon | Steps per final run | Matrix runs | Runs to execute | Runs reused | Estimated wall hours (3 workers) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| H10 | 1,000,000 | 12 | 11 | 1 | 2.43 |
+| H50 | 55,296 | 12 | 12 | 0 | 0.57 |
+| H100 | 75,000 | 12 | 12 | 0 | 0.71 |
+| Total | -- | 36 | 35 | 1 | 3.71 |
+
+Estimates use measured calibration throughput (h10 420, h50 387, h100 351
+steps/s) and three workers. H100 remains included; the previously proposed
+four-hour exclusion was explicitly revoked.
+
+## Stage 7 Revision and Final Matrix Launch Plan - 2026-11-01
+
+Checkpoint-only diagnosis of dense H10 seed 0 found 100% deterministic success
+(200 episodes) and 100% stochastic success (100 episodes) at 20k, 50k, 100k,
+200k, 500k, and 1M steps. The lower rolling training statistic comes from
+exploratory on-policy actions, not a late collapse or a layout/reward failure.
+The 1M checkpoint therefore passes the required 50% deterministic gate.
+
+Every horizon now uses 200,000 steps per run, matching the base experiment;
+no calibration run is reused. Calibration jobs took 2,381.5, 2,584.7, and
+2,848.2 seconds at H10/H50/H100 respectively, and their completion markers
+fell within about eight minutes. Scaling those actual wall times to 36 200k
+jobs and three workers gives an estimated 1.7-1.8 hours. The final matrix is
+36 jobs (three horizons x four rewards x seeds 0,1,2), three CPU workers,
+with OMP/BLAS threads pinned to one, output under `runs/stage7/final/`.
+
+## Stage 7 Final Matrix and Checkpoint Analysis - 2026-11-01
+
+The detached final queue completed all 36/36 jobs successfully (3 horizons x
+4 rewards x 3 seeds, 200,000 steps/job). Queue wall time was about 1h39m
+(13:39 to 15:18); aggregate worker time was 17,548.6s. Completion markers,
+results, configs and checkpoints are all under `runs/stage7/final/`.
+
+Final checkpoint evaluation used the unchanged ground-truth evaluator: 200
+deterministic episodes and 100 stochastic-policy episodes per run. Deterministic
+means (bootstrap 95% CI across three seeds) were H10: sparse 33% [0,100], dense
+100% [100,100], potential 100% [100,100], hybrid 100% [100,100]; H50: sparse
+0% [0,0], dense 67% [0,100], potential 67% [0,100], hybrid 100% [100,100];
+H100: sparse 0% [0,0], dense 100% [100,100], potential 33% [0,100], hybrid
+67% [0,100]. The 10-seed base reference is included in
+`comparison_with_base.csv` and `success_vs_horizon_with_base.png`.
+
+Steps-to-90 comes from deterministic saved checkpoints every 10k, not rolling
+training logs. Examples: dense H10 10k, H50 10k among retained seeds, H100
+16.7k; potential H10 10k, H50 55k, H100 80k; hybrid H10 10k, H50 10k, H100
+13.3k. Sparse did not reach 90% at H50/H100. The H10 logger measures only
+completed episodes (including truncations) but uses stochastic on-policy PPO
+actions; deterministic checkpoint evaluation removes that exploration noise.
+
+Taxonomy and stochastic rescue are in `final_per_seed.csv`; four learned-then-
+deterministic-failure runs were found: sparse H10 seed2 (55% stochastic), dense
+H50 seed2 (38%), potential H100 seed0 (100%), hybrid H100 seed1 (100%). Saved
+plots: `success_vs_horizon.png`, `success_vs_horizon_with_base.png`,
+`steps_to_90_vs_horizon.png`, and one learning curve per horizon. Three seeds
+per cell are preliminary; their bootstrap CIs are correspondingly wide.

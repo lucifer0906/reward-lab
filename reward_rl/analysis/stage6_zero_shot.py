@@ -82,6 +82,7 @@ def describe_failure(positions: list[tuple[int, int]], invalid_rate: float) -> s
 
 def evaluate_model(
     checkpoint: Path, config_path: str, layout_path: str, noise: float, episodes: int, seed: int,
+    deterministic: bool = True,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     env, raw, noisy = make_eval_env(config_path, layout_path, noise, seed)
     model = PPO.load(str(checkpoint), env=env, device="cpu")
@@ -94,7 +95,7 @@ def evaluate_model(
         requested: list[int] = []
         positions = [tuple(raw.state.agent_pos)]
         while not done:
-            action, _ = model.predict(observation, deterministic=True)
+            action, _ = model.predict(observation, deterministic=deterministic)
             requested.append(int(action))
             observation, reward, terminated, truncated, info = env.step(int(action))
             proxy_return += float(reward)

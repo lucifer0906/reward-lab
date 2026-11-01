@@ -1,0 +1,7 @@
+# Stage 7 horizon scaling: two ordered pairs, shortest solution about 10 steps.
+name: stage7_h10_2keys
+max_steps: 36
+layout:
+  - "##########"
+  - "#S.aA.bBG#"
+  - "##########"

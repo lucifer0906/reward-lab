@@ -1,0 +1,7 @@
+# Stage 7 horizon scaling: five ordered pairs, shortest solution about 50 steps.
+name: stage7_h50_5keys
+max_steps: 204
+layout:
+  - "############################################"
+  - "#S.....aA.....bB.....cC.....dD.....eE.....G#"
+  - "############################################"
