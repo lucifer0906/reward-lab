@@ -35,6 +35,8 @@ from __future__ import annotations
 
 from typing import Mapping
 
+import numpy as np
+
 from reward_rl.envs.dynamics import GridState, StepEvents
 from reward_rl.envs.layout import Layout
 
@@ -52,21 +54,26 @@ class PotentialReward:
         success_reward: float = 1.0,
         timeout_penalty: float = 0.0,
         step_cost: float = 0.0,
+        potential_scale: float = 1.0,
+        potential_noise_sigma: float = 0.0,
         max_steps: int = 100,
     ) -> None:
         self.gamma = gamma
         self.success_reward = success_reward
         self.timeout_penalty = timeout_penalty
         self.step_cost = step_cost
+        self.potential_scale = potential_scale
+        self.potential_noise_sigma = potential_noise_sigma
+        self._rng = np.random.default_rng(0)
         self.max_steps = max_steps
         self._prev_potential: float = 0.0
 
     def reset(self) -> None:
         """Reset potential tracking at episode start."""
         self._prev_potential = 0.0
+        self._rng = np.random.default_rng(0)
 
-    @staticmethod
-    def _potential(state: GridState, num_pairs: int) -> float:
+    def _potential(self, state: GridState, num_pairs: int) -> float:
         """Φ(s) = subgoal completion fraction ∈ [0, 1].
 
         Subgoals = keys collected + doors opened.
@@ -75,7 +82,10 @@ class PotentialReward:
         if num_pairs == 0:
             return 0.0
         completed = state.num_keys_collected + state.num_doors_open
-        return completed / (2 * num_pairs)
+        value = self.potential_scale * completed / (2 * num_pairs)
+        if self.potential_noise_sigma:
+            value += float(self._rng.normal(0.0, self.potential_noise_sigma))
+        return value
 
     def __call__(
         self,

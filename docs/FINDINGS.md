@@ -118,19 +118,32 @@ at H50/H100. The potential-degradation prediction was supported at H100
 not show monotonic deterioration (100% at H100); hybrid was strongest at H50
 and tied dense at H10, but fell to 67% at H100. The prediction that dense and
 hybrid partial-credit advantages would systematically grow is therefore
-refuted for this small sample. Collapse/retention failures occurred: H10
+not supported at n=3. Collapse/retention failures occurred: H10
 sparse-2 (stochastic success 55%), H50 dense-2 (38%), H100 potential-0
 (100%), and H100 hybrid-1 (100%) were learned checkpoint policies whose final
 deterministic action was failing. The last two are stochastic-rescued.
 
-The H10 rolling-training discrepancy is not an evaluator issue. The training
-callback records only completed (`done`) episodes, including time-limit
-truncations; it does not score partial episodes. However, it records actions
-sampled from PPO's stochastic training policy in a trailing 100-episode
-window, whereas saved-checkpoint evaluation uses deterministic argmax actions.
-Thus the 78% H10 rolling value is exploratory-action noise, while every tested
-deterministic checkpoint succeeded.
+The H10 rolling-training discrepancy is unexplained. The training callback
+records only completed (`done`) episodes, including time-limit truncations; it
+does not score partial episodes. Although its trailing 100-episode window
+differs from checkpoint evaluation, stochastic checkpoint evaluation was also
+100%, so action sampling does not explain the discrepancy. Headline numbers
+use checkpoint evaluation. A reported 10k steps-to-90 means at or before the
+first saved 10k checkpoint, not an exact crossing time.
 
 Limitations: Stage 7 has only three seeds per cell, so its wide bootstrap CIs
 often span 0--100%; the 10-seed base point has better precision but a different
-seed count. Results establish a useful scaling signal, not a definitive ranking.
+seed count. Only the sparse decline with horizon is robust at three seeds; the
+other strategy comparisons are preliminary.
+
+## Baselines
+
+| Layout | Random policy (1,000 episodes) | Solver success / steps |
+| --- | --- | --- |
+| Base | 0.0%, 100.0 mean steps | 100%, 26 |
+| H10 | 0.4%, 36.0 mean steps | 100%, 11 |
+| H50 | 0.0%, 204.0 mean steps | 100%, 51 |
+| H100 | 0.0%, 408.0 mean steps | 100%, 102 |
+
+The random policy uses the unchanged action space and evaluator; the scripted
+planner is the exact BFS solver. Raw results: `runs/baselines/baseline_summary.csv`.

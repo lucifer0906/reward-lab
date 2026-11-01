@@ -365,3 +365,24 @@ H50 seed2 (38%), potential H100 seed0 (100%), hybrid H100 seed1 (100%). Saved
 plots: `success_vs_horizon.png`, `success_vs_horizon_with_base.png`,
 `steps_to_90_vs_horizon.png`, and one learning curve per horizon. Three seeds
 per cell are preliminary; their bootstrap CIs are correspondingly wide.
+
+## Stage 8 Setup and Launch Plan - 2026-11-01
+
+Corrected Stage 7 interpretation in `docs/FINDINGS.md`: the H10 rolling versus
+checkpoint disagreement is unexplained because stochastic checkpoint evaluation
+was also 100%; headline results use checkpoint evaluation. A 10k checkpoint
+threshold is a floor (at or before the first saved checkpoint), and only sparse
+decline with horizon is robust at n=3.
+
+Saved random and exact-solver baselines under `runs/baselines/`: random success
+over 1,000 episodes was base 0.0%, H10 0.4%, H50 0.0%, H100 0.0%; solver success
+was 100% at 26, 11, 51 and 102 steps respectively. Verified and added thin
+wrappers for all founder CLIs: `reward_rl.train`, `reward_rl.evaluate`,
+`reward_rl.compare`, and `reward_rl.reward_audit`.
+
+Prepared 118 resumable Stage 8 jobs, all CPU and three workers in priority
+order A then B then C: A has 10 ablations x 5 seeds = 50 jobs at 200k; B has
+extra seeds 3--9 for four core rewards at H50/H100 = 56 jobs at 200k; C has
+12 sparse long-budget jobs at 1M. Outputs, markers, and queue JSON live under
+`runs/stage8/`. Stage 8 `potential_noisy` is explicitly a noisy-progress-signal
+test, not a valid potential-based shaping condition.

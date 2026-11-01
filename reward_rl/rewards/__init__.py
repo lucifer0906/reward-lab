@@ -60,6 +60,8 @@ def make_reward(reward_cfg: dict[str, Any], max_steps: int = 100) -> RewardFn:
             success_reward=params.get("success_reward", 1.0),
             timeout_penalty=params.get("timeout_penalty", 0.0),
             step_cost=params.get("step_cost", 0.0),
+            potential_scale=params.get("potential_scale", 1.0),
+            potential_noise_sigma=params.get("potential_noise_sigma", 0.0),
             max_steps=max_steps,
         )
 
