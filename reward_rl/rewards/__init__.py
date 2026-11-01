@@ -88,6 +88,7 @@ def make_reward(reward_cfg: dict[str, Any], max_steps: int = 100) -> RewardFn:
         return PotentialDistanceReward(
             gamma=params.get("gamma", 1.0),
             distance_scale=params.get("distance_scale", 0.1),
+            distance_baseline=params.get("distance_baseline", 0.0),
             success_reward=params.get("success_reward", 1.0),
             timeout_penalty=params.get("timeout_penalty", 0.0),
             max_steps=max_steps,

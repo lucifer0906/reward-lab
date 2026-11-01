@@ -100,6 +100,19 @@ def scalar_window(variant: str, seed: int, start: int, end: int, tags: list[str]
     return result
 
 
+def learning_taxonomy(variant: str, seed: int, final_success_rate: float) -> tuple[str, int | None]:
+    """Classify a run from its rolling evaluator curve and final checkpoint."""
+    accumulator = EventAccumulator(str(latest_event_dir(variant, seed)))
+    accumulator.Reload()
+    points = accumulator.Scalars("ground_truth/success_rate")
+    first_90 = next((int(point.step) for point in points if point.value >= 0.9), None)
+    if first_90 is None:
+        return "never_learned", None
+    if final_success_rate < 0.9:
+        return "learned_then_collapsed", first_90
+    return "learned_and_retained", first_90
+
+
 def write_scatter(rows: list[dict], output: Path, title: str) -> None:
     figure, axis = plt.subplots(figsize=(7, 5))
     values = np.asarray([row["proxy_return"] for row in rows])
@@ -129,6 +142,33 @@ def write_comparison_plot(seed_rows: list[dict], output: Path) -> None:
     axis.set_ylabel("Final deterministic success rate (200 episodes per seed)")
     axis.set_title("Final saved checkpoint performance")
     axis.grid(True, axis="y", alpha=0.3)
+    figure.tight_layout()
+    figure.savefig(output, dpi=160)
+    plt.close(figure)
+
+
+def write_weight_sweep_plot(summary: dict[str, dict], output: Path) -> None:
+    """Plot final success and reward-hacking incidence for naive-distance c values."""
+    rows = [
+        values for values in summary.values()
+        if values["reward_distance_decrease_c"] is not None
+    ]
+    if not rows:
+        return
+    rows.sort(key=lambda values: values["reward_distance_decrease_c"])
+    c_values = [values["reward_distance_decrease_c"] for values in rows]
+    success = [values["mean_final_success_rate"] for values in rows]
+    incidence = [values["hacking_incidence_above_success_median"] for values in rows]
+    figure, axis = plt.subplots(figsize=(7, 5))
+    axis.plot(c_values, success, marker="o", label="Final success")
+    axis.plot(c_values, incidence, marker="s", label="Hacking incidence")
+    axis.axvline(1.0 / 30.0, color="black", linestyle="--", label="Analytic break-even")
+    axis.set_xlabel("Naive distance coefficient c")
+    axis.set_ylabel("Fraction")
+    axis.set_ylim(-0.05, 1.05)
+    axis.set_title("Naive distance reward weight sweep")
+    axis.grid(True, alpha=0.3)
+    axis.legend()
     figure.tight_layout()
     figure.savefig(output, dpi=160)
     plt.close(figure)
@@ -204,6 +244,10 @@ def main() -> None:
                 "mean_subgoal_rate": float(np.mean([row["subgoal_completion_rate"] for row in rows])),
                 "mean_proxy_return": float(np.mean([row["proxy_return"] for row in rows])),
             })
+            if args.stage4:
+                taxonomy, step_90 = learning_taxonomy(variant, seed, seed_rows[-1]["final_success_rate"])
+                seed_rows[-1]["failure_taxonomy"] = taxonomy
+                seed_rows[-1]["steps_to_90pct_rolling_success"] = step_90
         write_scatter(
             [row for row in episode_rows if row["variant"] == variant],
             args.output_dir / f"{variant}_final_proxy_vs_success.png",
@@ -212,20 +256,22 @@ def main() -> None:
 
     summary: dict[str, dict] = {}
     for variant in variants:
+        reward_parameters = load_config(variants[variant])["reward"]
         rows = [row for row in seed_rows if row["variant"] == variant]
         rates = [row["final_success_rate"] for row in rows]
         all_rows = [row for row in episode_rows if row["variant"] == variant]
         returns = [row["proxy_return"] for row in all_rows]
         successes = [float(row["success"]) for row in all_rows]
-        try:
-            r_pb = float(pointbiserialr(successes, returns).statistic)
-        except ValueError:
-            r_pb = float("nan")
+        has_success_variance = len(set(successes)) > 1
+        r_pb = float(pointbiserialr(successes, returns).statistic) if has_success_variance else None
         success_returns = [row["proxy_return"] for row in all_rows if row["success"]]
         control_median = float(np.median(success_returns)) if success_returns else audit_controls.get(variant)
         incidence = None if control_median is None else float(np.mean([
             row["proxy_return"] > control_median and not row["success"] for row in all_rows
         ]))
+        failed_returns = [row["proxy_return"] for row in all_rows if not row["success"]]
+        failed_mean = float(np.mean(failed_returns)) if failed_returns else None
+        failed_gap = None if control_median is None or failed_mean is None else failed_mean - control_median
         summary[variant] = {
             "seeds_at_or_above_90pct": int(sum(rate >= 0.9 for rate in rates)),
             "total_seeds": len(rates),
@@ -233,11 +279,18 @@ def main() -> None:
             "mean_final_success_rate": float(np.mean(rates)),
             "bootstrap_95pct_ci_mean_success": bootstrap_ci(rates),
             "point_biserial_proxy_vs_success": r_pb,
+            "mean_failed_proxy_return": failed_mean,
+            "failed_minus_scripted_success_control_proxy_gap": failed_gap if not has_success_variance else None,
             "successful_control_median_proxy_return": control_median,
             "successful_control_source": "final_evaluation" if success_returns else (
                 "scripted_audit" if control_median is not None else None
             ),
             "hacking_incidence_above_success_median": incidence,
+            "reward_distance_decrease_c": reward_parameters.get("distance_decrease_reward"),
+            "analytic_distance_break_even_c": (
+                1.0 / 30.0 if reward_parameters.get("type") == "naive_distance" else None
+            ),
+            "reward_shaping_gamma": reward_parameters.get("gamma"),
         }
 
     with open(args.output_dir / "final_checkpoint_per_seed.csv", "w", newline="", encoding="utf-8") as handle:
@@ -273,17 +326,29 @@ def main() -> None:
                 with open(path, "r", encoding="utf-8") as handle:
                     training_rates.append(json.load(handle)["ground_truth"]["success_rate"])
             summary[variant]["secondary_whole_training_episode_weighted_success_mean"] = float(np.mean(training_rates))
+            variant_rows = [row for row in seed_rows if row["variant"] == variant]
+            summary[variant]["failure_taxonomy_counts"] = {
+                name: sum(row["failure_taxonomy"] == name for row in variant_rows)
+                for name in ("never_learned", "learned_then_collapsed", "learned_and_retained")
+            }
+            learned_steps = [row["steps_to_90pct_rolling_success"] for row in variant_rows
+                             if row["steps_to_90pct_rolling_success"] is not None]
+            summary[variant]["mean_steps_to_90pct_among_learned"] = (
+                float(np.mean(learned_steps)) if learned_steps else None
+            )
 
     report = {"protocol": {"episodes": args.episodes, "deterministic": True}, "summary": summary,
               "per_seed": seed_rows, "diagnostics": diagnostics}
     with open(args.output_dir / "final_checkpoint_report.json", "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=2, ensure_ascii=True, allow_nan=True)
     with open(args.output_dir / "final_checkpoint_summary.csv", "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["variant", *next(iter(summary.values())).keys()])
+        fields = ["variant", *sorted({key for values in summary.values() for key in values})]
+        writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for variant, values in summary.items():
             writer.writerow({"variant": variant, **values})
     write_comparison_plot(seed_rows, args.output_dir / "final_checkpoint_success_comparison.png")
+    write_weight_sweep_plot(summary, args.output_dir / "naive_distance_weight_sweep.png")
     print(f"Saved final-checkpoint report to: {args.output_dir}")
 
 

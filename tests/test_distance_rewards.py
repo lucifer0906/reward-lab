@@ -33,10 +33,20 @@ def test_naive_distance_farming_exceeds_success(base_layout):
     assert farmed["proxy_return"] > successful["proxy_return"]
 
 
+def test_naive_distance_analytic_break_even_matches_audit(base_layout):
+    break_even = 1.0 / 30.0
+    cycle = distance_oscillation_actions(base_layout, 100)
+    config = {"type": "naive_distance", "distance_decrease_reward": break_even, "success_reward": 1.0}
+    farmed = run_trajectory(base_layout, 100, config, cycle)
+    successful = run_trajectory(base_layout, 100, config, solve_actions(base_layout, 100))
+    assert farmed["proxy_return"] == pytest.approx(successful["proxy_return"])
+
+
 def test_potential_distance_oscillation_is_nonpositive(base_layout):
     result = run_trajectory(
         base_layout, 100,
-        {"type": "potential_distance", "gamma": 1.0, "distance_scale": 0.1, "success_reward": 1.0},
+        {"type": "potential_distance", "gamma": 0.99, "distance_scale": 0.1,
+         "distance_baseline": 22.0, "success_reward": 1.0},
         distance_oscillation_actions(base_layout, 100),
     )
     assert not result["success"]

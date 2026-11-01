@@ -50,7 +50,24 @@ PILOT_SEED = 42
 FINAL_SEEDS = [0, 1, 2, 3, 4]
 
 
-def run_single_job(config_path: str, seed: int, timesteps: int | None = None) -> dict:
+def _completed_result(variant_name: str, seed: int, timesteps: int | None) -> dict | None:
+    """Return a completed result only when its explicit resume marker is valid."""
+    run_dir = REPO_ROOT / "runs" / variant_name / f"seed_{seed}"
+    marker_path = run_dir / "completion.json"
+    results_path = run_dir / "results.json"
+    if not marker_path.exists() or not results_path.exists():
+        return None
+    with open(marker_path, "r", encoding="utf-8") as file_handle:
+        marker = json.load(file_handle)
+    with open(results_path, "r", encoding="utf-8") as file_handle:
+        result = json.load(file_handle)
+    requested = timesteps if timesteps is not None else result.get("total_timesteps")
+    if marker.get("status") != "complete" or result.get("total_timesteps") != requested:
+        return None
+    return result
+
+
+def run_single_job(config_path: str, seed: int, timesteps: int | None = None, resume: bool = False) -> dict:
     """Run a single training job as a subprocess with thread pinning."""
 
     # Thread pinning - critical for parallel CPU runs
@@ -71,6 +88,13 @@ def run_single_job(config_path: str, seed: int, timesteps: int | None = None) ->
     tmp_config = None
 
     try:
+        if resume:
+            completed = _completed_result(variant_name, seed, timesteps)
+            if completed is not None:
+                rate = completed.get("ground_truth", {}).get("success_rate", 0.0)
+                print(f"  [RESUME] {variant_name} seed={seed} already complete", flush=True)
+                return {"status": "skipped", "variant": variant_name, "seed": seed,
+                        "success_rate": rate, "elapsed": 0.0}
         # If timesteps override, create a temp config
         if timesteps is not None:
             with open(REPO_ROOT / config_path, "r", encoding="utf-8") as f:
@@ -110,6 +134,10 @@ def run_single_job(config_path: str, seed: int, timesteps: int | None = None) ->
                 with open(results_path, "r", encoding="utf-8") as f:
                     job_result = json.load(f)
                 gt_rate = job_result.get("ground_truth", {}).get("success_rate", 0)
+                marker_path = results_path.parent / "completion.json"
+                with open(marker_path, "w", encoding="utf-8") as file_handle:
+                    json.dump({"status": "complete", "timesteps": job_result["total_timesteps"]},
+                              file_handle, indent=2, ensure_ascii=True)
                 print(f"  [DONE]  {variant_name} seed={seed} -> {gt_rate:.1%} success ({elapsed:.0f}s)", flush=True)
                 return {
                     "status": "ok", "variant": variant_name, "seed": seed,
@@ -137,7 +165,8 @@ def run_single_job(config_path: str, seed: int, timesteps: int | None = None) ->
             tmp_config.unlink(missing_ok=True)
 
 
-def run_job_queue(jobs: list[tuple[str, int]], workers: int, timesteps: int | None = None) -> list[dict]:
+def run_job_queue(jobs: list[tuple[str, int]], workers: int, timesteps: int | None = None,
+                  resume: bool = False) -> list[dict]:
     """Run a list of (config_path, seed) jobs with N parallel workers."""
     print(f"\n{'='*60}")
     print(f"Job Queue: {len(jobs)} jobs, {workers} workers")
@@ -151,7 +180,7 @@ def run_job_queue(jobs: list[tuple[str, int]], workers: int, timesteps: int | No
     # ThreadPoolExecutor - threads just wait on subprocess.run(), no GIL issue
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(run_single_job, config, seed, timesteps): (config, seed)
+            pool.submit(run_single_job, config, seed, timesteps, resume): (config, seed)
             for config, seed in jobs
         }
         for future in as_completed(futures):
@@ -181,6 +210,11 @@ def main():
     parser.add_argument("--timesteps", type=int, default=None, help="Override total_timesteps")
     parser.add_argument("--configs", nargs="+", default=None, help="Config files (custom mode)")
     parser.add_argument("--seeds", type=int, nargs="+", default=None, help="Seeds (custom mode)")
+    parser.add_argument(
+        "--job", action="append", default=None, metavar="CONFIG:SEEDS",
+        help="Custom job group, for example configs/sparse.yaml:5,6,7,8,9; repeatable.",
+    )
+    parser.add_argument("--resume", action="store_true", help="Skip jobs with valid completion markers")
     args = parser.parse_args()
 
     if args.mode == "pilot":
@@ -193,19 +227,31 @@ def main():
             print("ERROR: --timesteps required for full mode. Run pilot first.")
             sys.exit(1)
     elif args.mode == "custom":
-        configs = args.configs or CONFIGS
-        seeds = args.seeds or [0]
-        jobs = [(cfg, seed) for cfg in configs for seed in seeds]
+        if args.job:
+            jobs = []
+            for item in args.job:
+                config, separator, seed_text = item.rpartition(":")
+                if not separator or not config or not seed_text:
+                    parser.error("--job must use CONFIG:SEED[,SEED,...]")
+                try:
+                    seeds = [int(seed) for seed in seed_text.split(",")]
+                except ValueError:
+                    parser.error("--job seeds must be integers")
+                jobs.extend((config, seed) for seed in seeds)
+        else:
+            configs = args.configs or CONFIGS
+            seeds = args.seeds or [0]
+            jobs = [(cfg, seed) for cfg in configs for seed in seeds]
         timesteps = args.timesteps
 
-    results = run_job_queue(jobs, workers=args.workers, timesteps=timesteps)
+    results = run_job_queue(jobs, workers=args.workers, timesteps=timesteps, resume=args.resume)
 
     # Save queue results
     out_path = REPO_ROOT / "runs" / f"queue_results_{args.mode}.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump({
             "mode": args.mode, "workers": args.workers,
-            "timesteps": timesteps, "results": results,
+            "timesteps": timesteps, "resume": args.resume, "results": results,
         }, f, indent=2, ensure_ascii=True)
     print(f"\nQueue results saved to: {out_path}")
 

@@ -54,7 +54,13 @@ one torch/BLAS thread per worker. All 20 queue jobs completed with status
 seed 42 had not learned at 100,000 steps, while the prior sparse baseline had
 required 200,000 steps.
 
-### Core results
+### Core results - SUPERSEDED FOR FINAL-POLICY CLAIMS
+
+**SUPERSEDED:** The following whole-training, episode-weighted aggregates are
+historical learning-curve metrics only. They are not final-checkpoint success
+rates and can mask late collapse. Use the deterministic final-checkpoint table
+in the 2026-10-26 verification section, and its forthcoming 10-seed extension,
+for all final-policy claims.
 
 Whole-training ground-truth success rate (mean +/- standard deviation):
 
@@ -197,3 +203,64 @@ modified. All 10 new jobs (2 variants x 5 seeds, 200k steps, 3 workers) complete
   replays are saved under `runs/stage5b_reward_hacking/` and
   `runs/stage5b_final_checkpoint/`. The naive-distance replay demonstrates the
   reward-hacking incentive. Test suite: 85 passed.
+
+## Ten-Seed Final Checkpoint Extension and Distance-Weight Sweep - 2026-11-01
+
+Ran one resumable 35-job queue at 200,000 steps per job, three workers, CPU,
+and one OMP/BLAS thread per worker. The queue completed 35/35 jobs with valid
+`results.json` plus `completion.json` markers. Existing evaluator, dynamics,
+PPO settings, and the six pre-existing reward configs were not changed.
+
+All final-policy results below use saved final checkpoints, deterministic
+actions, and 200 evaluator episodes per seed. This supersedes every
+whole-training success figure as a final-policy claim. Whole-training values
+remain secondary, episode-weighted learning-curve aggregates only.
+
+| Variant | Final success mean (bootstrap 95 percent CI) | Seeds >=90 percent | Median | Mean steps to 90 percent among learned |
+| --- | --- | --- | --- | --- |
+| sparse | 0.40 [0.10, 0.70] | 4/10 | 0.00 | 50,554 |
+| dense | 0.90 [0.70, 1.00] | 9/10 | 1.00 | 22,275 |
+| potential | 0.70 [0.40, 1.00] | 7/10 | 1.00 | 28,711 |
+| hybrid | 0.80 [0.50, 1.00] | 8/10 | 1.00 | 20,710 |
+
+Failure taxonomy: `never_learned` means rolling ground-truth success never
+reached 90 percent; `learned_then_collapsed` means it reached 90 percent but
+deterministic final success was below 90 percent.
+
+| Variant | Never learned | Learned then collapsed | Learned and retained |
+| --- | --- | --- | --- |
+| sparse | 1, 2, 4, 5, 6, 8 | none | 0, 3, 7, 9 |
+| dense | none | 3 | 0, 1, 2, 4, 5, 6, 7, 8, 9 |
+| potential | 1, 5 | 9 | 0, 2, 3, 4, 6, 7, 8 |
+| hybrid | none | 0, 4 | 1, 2, 3, 5, 6, 7, 8, 9 |
+
+Full per-seed checkpoint metrics, taxonomy, and threshold steps are in
+`runs/stage4_10seed_final_checkpoint/final_checkpoint_per_seed.csv`.
+
+Added naive-distance `c=0.02` and `c=0.05` configs and a new
+`potential_distance_gamma099` control. The pre-existing gamma=1.0
+`potential_distance` remains labelled legacy and was not modified.
+
+For the 100-step scripted oscillation there are 50 distance-decreasing moves.
+The successful path has 20 decreases plus terminal reward 1.0, so the analytic
+break-even is `50c = 1 + 20c`, or `c = 1/30 = 0.033333`. The scripted audit
+and unit test match this value. Therefore c=0.02 is below break-even; c=0.05
+and c=0.10 are above it.
+
+| c | Final success | Mean final proxy return | Hacking incidence | Scripted successful control | Failed minus control gap |
+| --- | --- | --- | --- | --- | --- |
+| 0.02 | 0.60 (3/5) | 1.26 | 0.00 | 1.40 | not applicable (success variance) |
+| 0.05 | 0.00 (0/5) | 2.45 | 0.80 | 2.00 | +0.45 |
+| 0.10 | 0.00 (0/5) | 5.38 | 1.00 | 3.00 | +2.38 |
+
+For zero-variance success (`c=0.05` and `c=0.10`), final-report JSON writes
+`point_biserial_proxy_vs_success: null`, not NaN, and reports the mean failed
+proxy-return gap to scripted successful control. The gamma-matched potential
+control uses `F=0.99*Phi(next)-Phi(current)` and an affine baseline of 22.0,
+which preserves distance differences while making fixed-target oscillation
+negative (-2.05 in the scripted audit). It achieved 0.60 final success (3/5)
+with zero hacking-incidence episodes.
+
+Saved audit, final-checkpoint tables, scatter plots, and the weight-sweep plot
+under `runs/stage5c_weight_sweep_audit/` and `runs/stage5c_weight_sweep_final/`.
+The full suite passed: 86 tests.
