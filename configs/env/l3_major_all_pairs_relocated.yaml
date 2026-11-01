@@ -1,0 +1,9 @@
+# Stage 6 unseen layout L3: every key and every door differs from base_3keys.
+name: l3_major_all_pairs_relocated
+max_steps: 100
+layout:
+  - "#################"
+  - "#S....b.B......G#"
+  - "#.###.###.###.###"
+  - "#..a.A.....c.C..#"
+  - "#################"

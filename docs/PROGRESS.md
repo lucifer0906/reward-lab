@@ -264,3 +264,26 @@ with zero hacking-incidence episodes.
 Saved audit, final-checkpoint tables, scatter plots, and the weight-sweep plot
 under `runs/stage5c_weight_sweep_audit/` and `runs/stage5c_weight_sweep_final/`.
 The full suite passed: 86 tests.
+
+## Stage 6 Zero-Shot Evaluation - 2026-11-01
+
+Added three solver-validated unseen 5x17 layouts without changing base dynamics:
+L1 minor start move (shortest solution 25), L2 one relocated key/door pair (32),
+and L3 all key/door pairs relocated (28). Added an evaluation-only executed-action
+noise wrapper that records the action actually passed to the unchanged environment
+and its episode record. No training was launched and no existing checkpoint/config,
+PPO setting, evaluator, or environment dynamics was modified.
+
+Evaluated all 40 saved core final checkpoints for 100 deterministic-policy episodes
+per condition. Primary results use the 28 learned-and-retained models. Base success
+was 100% for each retained variant; L1 was sparse 75.0%, dense 88.9%, potential
+71.4%, hybrid 87.5%; L2 and L3 were 0% for every variant. Therefore no variant
+generalized above 10% to L2 or L3. At 20% executed-action noise on base, success
+was sparse 99.5%, dense 99.3%, potential 99.0%, hybrid 95.9%.
+
+Saved per-seed data, both aggregate views and bootstrap CIs under
+`runs/stage6_zero_shot/`, plus `success_vs_noise.png`, `success_by_layout.png`,
+failed-episode action JSON, and a collapsed-policy GIF. The collapsed replays for
+dense seed 3, hybrid seed 4, and potential seed 9 all complete six subgoals then
+loop rather than taking the final route to the goal. Full claims, Phi conventions,
+weight-sweep context, and caveats are in `docs/FINDINGS.md`.

@@ -1,0 +1,9 @@
+# Stage 6 unseen layout L1: only the start position differs from base_3keys.
+name: l1_minor_start_moved
+max_steps: 100
+layout:
+  - "#################"
+  - "#...#...#...#..G#"
+  - "#...A.b.B...C...#"
+  - "#aS.#...#.c.#...#"
+  - "#################"

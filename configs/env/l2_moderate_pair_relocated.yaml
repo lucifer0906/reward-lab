@@ -1,0 +1,9 @@
+# Stage 6 unseen layout L2: the third key/door pair is relocated.
+name: l2_moderate_pair_relocated
+max_steps: 100
+layout:
+  - "#################"
+  - "#S..#...#...#..G#"
+  - "#...A.b.B.......#"
+  - "#a..#...#.C.#c..#"
+  - "#################"
