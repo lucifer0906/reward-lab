@@ -470,3 +470,20 @@ checklist item, Section 19 experiment, Section 18 metric, Section 20 graph,
 and Section 23 reproducibility requirement. Main gaps are no root README with
 Section 25 commands, no AUC/convergence artifact, incomplete threshold and
 component aggregates, and no explicit validated recipe decision tree.
+
+## Documentation and Closure Pass - 2026-11-02
+
+Created `runs/final_summary/auc_convergence_per_run.csv`,
+`auc_convergence_summary.csv`, and `normalised_auc_by_horizon.png` from saved
+deterministic intermediate-checkpoint evaluations. The artifact reports
+normalized AUC and episodes-to-90 with bootstrap CIs, and explicitly identifies
+runs with no 90% checkpoint. It does not fill missing convergence with a
+synthetic value.
+
+Added root `README.md` with Windows UTF-8 guidance, pinned-install steps, all
+four Section 25 CLI examples, repo map, reproduction commands, result links and
+limitations. A clean-shell smoke pass succeeded for train (the permitted 2,048
+steps), evaluate, compare and reward_audit; smoke outputs are under `runs/smoke/`.
+The full test suite remains required below. `docs/RECIPE.md` was requested for
+verification but is absent from this worktree, so no recipe claims or paths
+could be checked or edited in this pass.

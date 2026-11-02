@@ -275,3 +275,15 @@ OR 9.00 (95% CI 2.87--28.26, p=0.000048); versus dense: 0.43
 (0.09--1.98, p=0.281); versus potential: 2.58 (0.83--8.03, p=0.099); versus
 hybrid: 1.00 (0.28--3.59, p=1.00). These are descriptive because the three
 strata are different hand-built layouts.
+
+### Closure metrics
+
+Checkpoint-based normalized deterministic AUC and training-episode convergence
+to 90% are in `runs/final_summary/auc_convergence_summary.csv`; the matching
+plot is `runs/final_summary/normalised_auc_by_horizon.png`. These are descriptive
+sample-efficiency measures, not new reward-ranking claims. Runs that never
+reached a deterministic 90% checkpoint are counted as missing convergence, not
+assigned an artificial episode count. The remaining labels throughout this
+document are **robust**, **suggestive**, or **not detectable** as stated in the
+Stage 8b tables; older five-seed directional observations are superseded by
+their ten-seed Holm-corrected labels.

@@ -14,12 +14,12 @@ scope, replication, or artifact gap; **not done** has no adequate evidence.
 | Reward components independently logged | done | `reward_rl/training/callbacks.py`, TensorBoard logs in `runs/*/tb_logs/` | No consolidated component plot for every experiment. |
 | PPO trains all primary variants | done | `runs/{sparse,dense,potential,hybrid}/seed_*/results.json` | Results are task-specific. |
 | Multiple random seeds evaluated | done | `runs/stage4_10seed_final_checkpoint/`, `runs/stage8/analysis/` | H10 remains only three seeds. |
-| Quantitative sample efficiency | partial | `runs/stage8/analysis/stage4_steps_to_90_checkpoint.csv`, `runs/stage7/final/steps_to_90_vs_horizon.png` | 25/50/75 thresholds and a common all-variant sample-efficiency summary are absent. |
+| Quantitative sample efficiency | partial | `runs/final_summary/auc_convergence_summary.csv`, `runs/final_summary/normalised_auc_by_horizon.png` | AUC and 90% convergence are now consolidated, but 25/50/75 thresholds are absent. |
 | Long-horizon scaling | partial | `runs/stage8/analysis/horizon_comparison_summary.csv`, Stage 7 layouts | One hand-built layout per length confounds layout and horizon. |
 | Reward-hacking tests | done | `runs/stage5_reward_hacking/audit_results.json`, `runs/stage5c_weight_sweep_audit/audit_results.json` | Scripted stress cases are not an exhaustive exploit search. |
 | Reward-to-success correlation | done | `runs/stage4_reward_vs_success/*_proxy_reward_vs_success.png`, `runs/stage8/analysis/reward_indistinguishable_summary.csv` | Training-time correlation remains observational. |
 | Ablations identify useful components | partial | `runs/stage8b/analysis/ablation_10seed_summary.csv`, `ablation_10seed_tests.csv` | No effect survives 10-way Holm; terminal removal is suggestive only. |
-| Validated reward-shaping recipe with limitations | partial | `docs/FINDINGS.md` | No explicit decision-tree recipe document yet. |
+| Validated reward-shaping recipe with limitations | partial | `docs/FINDINGS.md` | `docs/RECIPE.md` was requested for audit but is absent from this worktree; no audited decision-tree artifact is available. |
 
 ## Section 19 experiments
 
@@ -40,7 +40,7 @@ scope, replication, or artifact gap; **not done** has no adequate evidence.
 | --- | --- | --- | --- |
 | Final success / seed variance | done | `runs/stage8b/analysis/horizon_comparison_summary.csv` | H10 only n=3. |
 | Steps to target success | partial | `runs/stage8b/analysis/per_seed_evaluations.csv` | Only 90% threshold. |
-| AUC / episodes to convergence | not done | -- | No consolidated artifact. |
+| AUC / episodes to convergence | done | `runs/final_summary/auc_convergence_summary.csv`, `runs/final_summary/normalised_auc_by_horizon.png` | Checkpoint-based deterministic AUC; unavailable convergence is explicitly counted. |
 | Episode length / planning efficiency | partial | `runs/stage8b/analysis/raw_evaluations.json`, `runs/stage6_zero_shot/per_seed.csv` | Planning-efficiency comparison not consolidated. |
 | Invalid action / subgoal rate | partial | `runs/stage4_analysis/stage4_invalid_action_rate.png`, TensorBoard logs | No all-stage aggregate. |
 | Reward-success correlation / hacking incidence | done | `runs/stage4_reward_vs_success/`, `runs/stage8/analysis/reward_indistinguishable_summary.csv` | Correlation is task-specific. |
@@ -65,4 +65,4 @@ scope, replication, or artifact gap; **not done** has no adequate evidence.
 | Reward components logged separately | done | `reward_rl/training/callbacks.py` and TensorBoard logs. |
 | Evaluations stored separately | done | `runs/*/eval_logs/`, `runs/stage8*/analysis/`. |
 | At least three seeds | done | Stage 4/8 use 10; Stage 7 H10 has 3 and is labelled preliminary. |
-| README with Section 25 commands | not done | No root `README.md` exists. The commands exist in `AGENTS.md` and package entrypoints, but the requested README artifact is missing. |
+| README with Section 25 commands | done | `README.md`; train, evaluate, compare, and reward_audit were smoke-tested from fresh PowerShell processes. |
