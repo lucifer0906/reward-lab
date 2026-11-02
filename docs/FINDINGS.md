@@ -210,3 +210,43 @@ Updated Stage 4 checkpoint-only steps-to-90 for all 40 base runs are in
 `runs/stage8/analysis/stage4_steps_to_90_checkpoint.csv`. All Stage 8 analysis
 tables and plots are in `runs/stage8/analysis/`, including success and
 steps-to-90 versus horizon, the ablation chart, and sparse 200k-versus-1M plot.
+
+### Stage 8b statistical corrections
+
+Only two Stage 8 conclusions are robust at their tested sample sizes: removing
+the terminal success reward harms dense retention, and at H100 sparse is below
+dense and hybrid. A one-seed-of-five difference such as 3/5 versus 4/5 is not
+detectable (two-sided Fisher exact p=1.00), so the other n=5 ablation apparent
+differences are exploratory rather than evidence that a component is removable
+or necessary. The sparse horizon pattern is suggestive, not robust: base 4/10,
+H50 4/10, H100 0/10; base versus H100 has two-sided Fisher p=0.087. Each
+horizon is one hand-built layout, so layout changes and path length are
+confounded.
+
+The new reward-indistinguishable-failure metric counts failed final episodes
+whose proxy return is at least 90% of scripted successful-control return. It is
+75% (600/800 failed episodes) for `dense_no_terminal_success`, 0% for
+`potential_noisy` (0/200), and 0% for every core cell and other ablation in
+this deterministic final-checkpoint set. Thus the no-terminal condition is a
+genuine reward/goal mismatch under a less strict test; noisy Phi did not show
+that particular failure mode here. Details are in
+`runs/stage8/analysis/reward_indistinguishable_summary.csv`.
+
+An exploratory Cochran-Mantel-Haenszel pooling of the base, H50, and H100
+retained-seed tables estimates odds ratios relative to sparse of 16.83 for
+dense (95% CI 4.66--60.80, p=0.000001), 4.57 for potential (1.43--14.64,
+p=0.0085), and 9.00 for hybrid (2.87--28.26, p=0.000048). Dense versus
+potential has OR 5.74 (1.43--22.98, p=0.0086); dense versus hybrid and hybrid
+versus potential are not significant. These pooled tests are descriptive, not
+new causal layout-generalization claims, because the three strata are different
+hand-built layouts. Full tables and homogeneity tests are in
+`runs/stage8/analysis/stratified_retained_seed_tests.csv`.
+
+Sparse logger data show that most final failures never logged a single success:
+all H100 200k failures, all H50 long-budget failures, and five of six base
+long-budget failures have no nonzero logged success window. The late retained
+base seed 6 first logged success at 940k and H100 seed 1 at 542,720. H10 seed
+2 did log success at 4,096 but ultimately failed, showing a rare learn-then-
+fail exception. The callback did not persist individual episode timestamps, so
+these are first *logged* nonzero-success steps, not exact first successful
+episode times; see `runs/stage8/analysis/sparse_first_logged_success.csv`.

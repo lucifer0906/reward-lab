@@ -418,3 +418,34 @@ two H100 sparse jobs remained stuck; none learned then failed. This supports a
 genuine long-horizon sparse-credit limitation. Analysis artifacts, checkpoint
 steps-to-90 for all Stage 4 runs, tables and plots are under
 `runs/stage8/analysis/`.
+
+## Stage 8b Analysis Corrections and Launch - 2026-11-02
+
+Read-only corrections added a less strict reward-indistinguishable-failure
+metric: failed final episodes with proxy return at least 90% of scripted
+successful-control return. Dense without terminal success has 600/800 (75%)
+such failed episodes; `potential_noisy` has 0/200 and all core/other ablation
+cells have zero under this metric. The full result is
+`runs/stage8/analysis/reward_indistinguishable_summary.csv`.
+
+The earlier Stage 8 component-level wording is narrowed: only the terminal-
+reward ablation and the H100 sparse-versus-dense/hybrid contrasts are robust.
+A 3/5 versus 4/5 retained contrast has two-sided Fisher p=1.00, so other
+five-seed apparent ablation differences are not detectable. Sparse decline is
+suggestive, not robust (base 4/10, H50 4/10, H100 0/10; base-vs-H100 Fisher
+p=0.087), and each horizon is a single hand-built layout that confounds layout
+with length. A three-stratum CMH table is saved in
+`runs/stage8/analysis/stratified_retained_seed_tests.csv`; it is descriptive
+rather than proof of layout-generalization effects.
+
+Training logs generally contain no nonzero success window for sparse failures.
+The two long-budget slow learners first logged success at base seed 6=940k and
+H100 seed 1=542,720; H10 seed 2 is the exception that logged success (4,096)
+but failed finally. These are first logged-window, not exact episode, steps
+because individual episode timestamps were not persisted.
+
+Prepared one Stage 8b resumable queue: group A is potential_x3 at H50/H100,
+10 seeds each (20 x 200k); group B is the ten existing base ablations for
+seeds 5--9 (50 x 200k). The new potential_x3 configs differ only in environment
+layout and preserve its scale=3.0 reward/PPO settings. Outputs, queue reports,
+and logs use `runs/stage8b/`; CPU workers are pinned to one OMP/BLAS thread.
