@@ -386,3 +386,35 @@ extra seeds 3--9 for four core rewards at H50/H100 = 56 jobs at 200k; C has
 12 sparse long-budget jobs at 1M. Outputs, markers, and queue JSON live under
 `runs/stage8/`. Stage 8 `potential_noisy` is explicitly a noisy-progress-signal
 test, not a valid potential-based shaping condition.
+
+## Stage 8 Analysis - 2026-11-02
+
+Verified all 118/118 Stage 8 `completion.json` markers and `results.json`
+artifacts; none was missing or corrupt. Read-only checkpoint analysis evaluated
+final models with 200 deterministic and 100 stochastic episodes, and every 10k
+intermediate checkpoint with one deterministic and 20 stochastic episodes.
+Five repeated deterministic-checkpoint samples were identical, confirming that
+seeds, rather than repeated deterministic episodes, are the independent units.
+
+At H50 (10 seeds), retained success was sparse 4/10 (mean 0.40), dense 8/10
+(0.80), potential 6/10 (0.60), hybrid 7/10 (0.70); no pairwise contrast
+survived six-way Holm correction. At H100 it was sparse 0/10 (0.00), dense
+10/10 (1.00), potential 5/10 (0.50), hybrid 9/10 (0.90). Sparse was
+significantly below dense (Holm p=0.000065) and hybrid (0.000595) at H100;
+the other H100 comparisons were not Holm-significant. H10 remains a
+three-seed preliminary result.
+
+The base ablations identify terminal success as essential (dense without it:
+1/5 retained, 0.20 mean). Removing key or invalid-action credit reduced dense
+retention to 3/5; halving subgoal reward reduced it to 2/5. Door credit and the
+two tested hybrid penalties were removable without a visible loss at n=5.
+Potential x3 retained 5/5; the noisy potential signal retained 4/5 and remains
+explicitly invalid as potential-based shaping. Strict failed-episode proxy
+returns above scripted-success control were zero for all ablation cells.
+
+One million sparse steps produced only two slow learners: base seed 6 reached
+90% at 960k and H100 seed 1 at 570k. The other five base, all three H50, and
+two H100 sparse jobs remained stuck; none learned then failed. This supports a
+genuine long-horizon sparse-credit limitation. Analysis artifacts, checkpoint
+steps-to-90 for all Stage 4 runs, tables and plots are under
+`runs/stage8/analysis/`.

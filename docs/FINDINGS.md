@@ -2,13 +2,13 @@
 
 ## Claims, evidence, and caveats
 
-| Claim | Evidence | Caveat |
+| Claim | Status | Evidence | Caveat |
 | --- | --- | --- |
-| Final retained-policy reliability differs by reward. | Ten-seed final-checkpoint evaluation: sparse 4/10, dense 9/10, potential 7/10, hybrid 8/10 seeds at or above 90% success. | These are one fixed layout and PPO setup, not a universal ranking. |
-| Collapse is not specific to dense or hybrid shaping. | Dense seed 3, hybrid seeds 0 and 4, and **potential seed 9** learned then collapsed. | A final checkpoint is necessary to detect it; episode-weighted training aggregates can hide it. |
-| Larger naive distance weights create a reward-hacking incentive. | The analytic break-even is c=1/30=0.0333. At c=0.02, 3/5 retained success; at c=0.05 and c=0.10, 0/5 retained success and hacking incidence was 0.80 and 1.00. | This establishes the incentive in this 100-step gridworld, not every distance bonus. |
-| Retained policies tolerate execution noise on the base layout. | At 20% action replacement, primary-view success: sparse 99.5%, dense 99.3%, potential 99.0%, hybrid 95.9%. | The wrapper records executed actions; this tests stochastic action execution, not observation noise or new dynamics. |
-| Retained policies do not generalize to the moderate or major layouts. | L2 and L3 success is 0.0% for every core variant in the primary view. | The layouts preserve size, observation shape, three pairs, and task order, but are only three hand-designed tests. |
+| Final retained-policy reliability differs by reward. | Robust | Ten-seed final-checkpoint evaluation: sparse 4/10, dense 9/10, potential 7/10, hybrid 8/10 seeds at or above 90% success. | These are one fixed layout and PPO setup, not a universal ranking. |
+| Collapse is not specific to dense or hybrid shaping. | Robust | Dense seed 3, hybrid seeds 0 and 4, and **potential seed 9** learned then collapsed. | A final checkpoint is necessary to detect it; episode-weighted training aggregates can hide it. |
+| Larger naive distance weights create a reward-hacking incentive. | Robust | The analytic break-even is c=1/30=0.0333. At c=0.02, 3/5 retained success; at c=0.05 and c=0.10, 0/5 retained success and hacking incidence was 0.80 and 1.00. | This establishes the incentive in this 100-step gridworld, not every distance bonus. |
+| Retained policies tolerate execution noise on the base layout. | Suggestive | At 20% action replacement, primary-view success: sparse 99.5%, dense 99.3%, potential 99.0%, hybrid 95.9%. | The wrapper records executed actions; this tests stochastic action execution, not observation noise or new dynamics. |
+| Retained policies do not generalize to the moderate or major layouts. | Suggestive | L2 and L3 success is 0.0% for every core variant in the primary view. | The layouts preserve size, observation shape, three pairs, and task order, but are only three hand-designed tests. |
 
 Detailed Stage 4 data: `runs/stage4_10seed_final_checkpoint/final_checkpoint_per_seed.csv`.
 Weight sweep: `runs/stage5c_weight_sweep_final/final_checkpoint_summary.csv`.
@@ -147,3 +147,66 @@ other strategy comparisons are preliminary.
 
 The random policy uses the unchanged action space and evaluator; the scripted
 planner is the exact BFS solver. Raw results: `runs/baselines/baseline_summary.csv`.
+
+## Stage 8 analysis (final saved checkpoints only)
+
+All 118 Stage 8 completion markers and `results.json` files were present,
+readable, and internally complete (50 ablations, 56 extra-horizon seeds, and
+12 sparse long-budget runs). No training was run for this analysis. Final
+checkpoints used 200 deterministic and 100 stochastic episodes. Every 10k
+intermediate checkpoint used one deterministic and 20 stochastic episodes.
+On five sampled deterministic checkpoints, all repeated episodes had identical
+success and proxy return; therefore the deterministic per-seed result is one
+policy/layout outcome, not 200 independent observations. A 10k threshold means
+at or before the first saved checkpoint.
+
+### Base-layout ablations (five seeds)
+
+The table is final deterministic success; brackets are seed-bootstrap 95% CIs.
+`n90` is retained seeds at or above 90%. Point-biserial and the strict
+above-scripted-success-control failed-episode incidence are in
+`runs/stage8/analysis/ablation_summary.csv`; every incidence was 0.0 here.
+That absence does not make removal of terminal success safe: it only says this
+specific high-proxy failure criterion did not occur in final evaluations.
+
+| Variant | n90 | Mean [CI] | Steps-to-90 | Verdict |
+| --- | ---: | --- | ---: | --- |
+| dense (parent; 10-seed reference 9/10, 0.90) | 4/5 | 0.80 [0.40,1.00] | 32k | Five-seed control. |
+| dense no door reward | 4/5 | 0.80 [0.40,1.00] | 85k | Door credit is removable here but learning is slower. |
+| dense no key reward | 3/5 | 0.60 [0.20,1.00] | 30k | Key credit helps retention. |
+| dense no invalid penalty | 3/5 | 0.60 [0.20,1.00] | 30k | Invalid-action penalty helps retention. |
+| dense no terminal success | 1/5 | 0.20 [0.00,0.60] | 32k | Hacking/goal-misalignment test: terminal success is essential. |
+| dense subgoal x0.5 | 2/5 | 0.40 [0.00,0.80] | 38k | Weaker progress reward harms retention. |
+| dense subgoal x2 | 4/5 | 0.80 [0.40,1.00] | 24k | No retention gain; may learn faster. |
+| hybrid (parent; 10-seed reference 8/10, 0.80) | 3/5 | 0.60 [0.20,1.00] | 24k | Five-seed control. |
+| hybrid no invalid penalty | 4/5 | 0.80 [0.40,1.00] | 30k | Removable without visible harm at n=5. |
+| hybrid no step/timeout penalty | 4/5 | 0.80 [0.40,1.00] | 24k | Removable without visible harm at n=5. |
+| potential (parent; 10-seed reference 7/10, 0.70) | 4/5 | 0.80 [0.40,1.00] | 35k | Five-seed control. |
+| potential x3 | 5/5 | 1.00 [1.00,1.00] | 30k | Stronger valid Phi signal helped in this sample. |
+| potential noisy | 4/5 | 0.80 [0.40,1.00] | 38k | Misleading-signal test: noise did not reduce retention here, but this is not valid potential shaping. |
+
+### Extended horizon seeds and long sparse budget
+
+| Horizon | Sparse | Dense | Potential | Hybrid |
+| --- | --- | --- | --- | --- |
+| H50 (10 seeds) | 4/10, 0.40 [0.10,0.70] | 8/10, 0.80 [0.50,1.00] | 6/10, 0.60 [0.30,0.90] | 7/10, 0.70 [0.40,1.00] |
+| H100 (10 seeds) | 0/10, 0.00 [0.00,0.00] | 10/10, 1.00 [1.00,1.00] | 5/10, 0.50 [0.20,0.80] | 9/10, 0.90 [0.70,1.00] |
+
+At H50, none of the six pairwise retained-count tests survives Holm correction.
+At H100, sparse is lower than dense (Holm p=0.000065) and hybrid (0.000595);
+all other comparisons are not significant after Holm correction. Thus H100
+sparse failure and dense reliability are robust in this 10-seed comparison;
+the remaining ordering is suggestive. H10 remains preliminary (three seeds).
+The machine-readable bootstrap differences and Fisher tests are
+`runs/stage8/analysis/pairwise_comparisons.csv`.
+
+Sparse did not become broadly viable at one million steps: base seed 6 was
+slow and reached 90% at 960k (five other base seeds stayed stuck); all three
+H50 runs stayed stuck; H100 seed 1 was slow and reached 90% at 570k (two stayed
+stuck). No long-budget seed learned and then failed. This supports a real
+long-horizon sparse-credit problem rather than only an insufficient 200k budget.
+
+Updated Stage 4 checkpoint-only steps-to-90 for all 40 base runs are in
+`runs/stage8/analysis/stage4_steps_to_90_checkpoint.csv`. All Stage 8 analysis
+tables and plots are in `runs/stage8/analysis/`, including success and
+steps-to-90 versus horizon, the ablation chart, and sparse 200k-versus-1M plot.
