@@ -449,3 +449,24 @@ Prepared one Stage 8b resumable queue: group A is potential_x3 at H50/H100,
 seeds 5--9 (50 x 200k). The new potential_x3 configs differ only in environment
 layout and preserve its scale=3.0 reward/PPO settings. Outputs, queue reports,
 and logs use `runs/stage8b/`; CPU workers are pinned to one OMP/BLAS thread.
+
+## Stage 8b Evaluation and Compliance Check - 2026-11-02
+
+All 70/70 Stage 8b `results.json` artifacts and completion markers were
+present and readable. A read-only, three-worker checkpoint batch evaluated all
+70 final models (200 deterministic plus 100 stochastic episodes) and all 10k
+intermediates (one deterministic plus 20 stochastic episodes). Raw data,
+per-seed tables, summaries, tests and plots are under `runs/stage8b/analysis/`.
+
+Potential x3 retained 8/10 at H50 (mean 0.80, CI 0.50--1.00, 15k
+steps-to-90) and 9/10 at H100 (0.90, CI 0.70--1.00, 22k). It did not beat
+standard potential or dense after the two pre-specified Holm corrections.
+The ten-seed ablations found dense-no-terminal-success at 3/10 versus dense
+9/10 (raw p=0.0198; Holm p=0.198, therefore suggestive, not robust); every
+other ablation was not detectable after the ten-way correction.
+
+Created `docs/DEFINITION_OF_DONE.md`, an honest audit of every Section 27
+checklist item, Section 19 experiment, Section 18 metric, Section 20 graph,
+and Section 23 reproducibility requirement. Main gaps are no root README with
+Section 25 commands, no AUC/convergence artifact, incomplete threshold and
+component aggregates, and no explicit validated recipe decision tree.

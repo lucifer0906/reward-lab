@@ -250,3 +250,28 @@ base seed 6 first logged success at 940k and H100 seed 1 at 542,720. H10 seed
 fail exception. The callback did not persist individual episode timestamps, so
 these are first *logged* nonzero-success steps, not exact first successful
 episode times; see `runs/stage8/analysis/sparse_first_logged_success.csv`.
+
+## Stage 8b final checkpoint evaluation
+
+All 70 Stage 8b `results.json` files and completion markers were readable. The
+saved final checkpoints were evaluated with 200 deterministic and 100
+stochastic episodes; each 10k intermediate checkpoint used one deterministic
+and 20 stochastic episodes. Outputs are in `runs/stage8b/analysis/`.
+
+| Claim | Label | Evidence and caveat |
+| --- | --- | --- |
+| Potential x3 improves standard potential at H50/H100. | Not detectable | H50: 8/10 versus 6/10, Fisher p=0.628; H100: 9/10 versus 5/10, raw p=0.141 and Holm p=0.282. |
+| Potential x3 matches dense. | Not detectable | H50: both 8/10; H100: 9/10 versus 10/10, Fisher p=1.0. |
+| Removing terminal success reduces dense retention. | Suggestive | 3/10 retained versus dense 9/10; raw Fisher p=0.0198, 10-way Holm p=0.198. It does not meet the predeclared robust threshold. |
+| Any other tested ablation changes retention. | Not detectable | All remaining raw Fisher p values are at least 0.141 and all Holm p values are 1.0. |
+
+Potential x3 final retained counts were H50 8/10 (mean 0.80, CI
+0.50--1.00; mean steps-to-90 15k) and H100 9/10 (0.90, CI 0.70--1.00;
+22k). It had two stochastic rescues at H50 and none at H100. At H100 the
+standard-potential comparison is suggestive in direction but not Holm-significant.
+
+The pooled base/H50/H100 CMH comparison estimates potential x3 versus sparse:
+OR 9.00 (95% CI 2.87--28.26, p=0.000048); versus dense: 0.43
+(0.09--1.98, p=0.281); versus potential: 2.58 (0.83--8.03, p=0.099); versus
+hybrid: 1.00 (0.28--3.59, p=1.00). These are descriptive because the three
+strata are different hand-built layouts.
