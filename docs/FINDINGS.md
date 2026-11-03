@@ -287,3 +287,7 @@ assigned an artificial episode count. The remaining labels throughout this
 document are **robust**, **suggestive**, or **not detectable** as stated in the
 Stage 8b tables; older five-seed directional observations are superseded by
 their ten-seed Holm-corrected labels.
+
+The audited decision guide is [RECIPE.md](RECIPE.md). It uses the same
+robust/suggestive/not-detectable labels and links its evidence to these saved
+reports.

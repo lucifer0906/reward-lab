@@ -19,8 +19,8 @@ def episodes(run,step):
  pts=a.Scalars(tag); return next((int(p.value) for p in pts if p.step>=step),int(pts[-1].value) if pts else None)
 def add(rows,h,v,s,curve,run):
  curve=sorted(curve);steps=np.array([0]+[x[0] for x in curve]);ys=np.array([0]+[x[1] for x in curve]);last=int(steps[-1]);auc=float(np.trapezoid(ys,steps)/last) if last else None
- hit=next((int(x) for x,y in curve if y>=.9),None)
- rows.append({'horizon':h,'variant':v,'seed':s,'final_step':last,'normalised_deterministic_auc':auc,'steps_to_90':hit,'training_episodes_to_90':episodes(run,hit),'run':str(run)})
+ hits={f'steps_to_{pct}':next((int(x) for x,y in curve if y>=pct/100),None) for pct in (25,50,75,90)}
+ rows.append({'horizon':h,'variant':v,'seed':s,'final_step':last,'normalised_deterministic_auc':auc,**hits,'training_episodes_to_90':episodes(run,hits['steps_to_90']),'run':str(run)})
 def main():
  OUT.mkdir(parents=True,exist_ok=True); rows=[]
  old=json.load(open(ROOT/'runs/stage8/analysis/raw.json',encoding='utf-8'))
@@ -49,7 +49,10 @@ def main():
    data=[r for r in rows if r['horizon']==h and r['variant']==v]
    if not data:continue
    au=[r['normalised_deterministic_auc'] for r in data if r['normalised_deterministic_auc'] is not None];ep=[r['training_episodes_to_90'] for r in data if r['training_episodes_to_90'] is not None]
-   summary.append({'horizon':h,'variant':v,'n_runs':len(data),'n_auc':len(au),'mean_normalised_auc':float(np.mean(au)) if au else None,'auc_ci_low':bootstrap_ci(au)[0] if au else None,'auc_ci_high':bootstrap_ci(au)[1] if au else None,'n_converged_90':len(ep),'mean_training_episodes_to90':float(np.mean(ep)) if ep else None,'episodes_ci_low':bootstrap_ci(ep)[0] if ep else None,'episodes_ci_high':bootstrap_ci(ep)[1] if ep else None,'missing_convergence_runs':len(data)-len(ep)})
+   row={'horizon':h,'variant':v,'n_runs':len(data),'n_auc':len(au),'mean_normalised_auc':float(np.mean(au)) if au else None,'auc_ci_low':bootstrap_ci(au)[0] if au else None,'auc_ci_high':bootstrap_ci(au)[1] if au else None,'n_converged_90':len(ep),'mean_training_episodes_to90':float(np.mean(ep)) if ep else None,'episodes_ci_low':bootstrap_ci(ep)[0] if ep else None,'episodes_ci_high':bootstrap_ci(ep)[1] if ep else None,'missing_convergence_runs':len(data)-len(ep)}
+   for pct in (25,50,75,90):
+    values=[r[f'steps_to_{pct}'] for r in data if r[f'steps_to_{pct}'] is not None];row[f'n_reached_{pct}']=len(values);row[f'mean_steps_to_{pct}']=float(np.mean(values)) if values else None
+   summary.append(row)
  save(OUT/'auc_convergence_summary.csv',summary)
  fig,ax=plt.subplots(figsize=(9,5));x=np.arange(4);hs=('base','h10','h50','h100')
  for v in CORE:

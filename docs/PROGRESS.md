@@ -487,3 +487,14 @@ steps), evaluate, compare and reward_audit; smoke outputs are under `runs/smoke/
 The full test suite remains required below. `docs/RECIPE.md` was requested for
 verification but is absent from this worktree, so no recipe claims or paths
 could be checked or edited in this pass.
+
+## Final Closure Pass - 2026-11-03
+
+Verified the user-supplied `docs/RECIPE.md` against saved reports: no numeric
+mismatches or bad evidence paths were found, and its claims were not rewritten.
+README and FINDINGS now link to it. The final summary now records deterministic
+checkpoint steps to 25/50/75/90 (10k is a checkpoint-resolution floor),
+normalized AUC, and episodes-to-90. Added the saved training-log figures for
+mean episode reward by variant/layout and base reward-component means. Component
+logs are per-step windows, not episode-level component returns; that limitation
+is recorded in the coverage CSV and completion audit. No training was run.

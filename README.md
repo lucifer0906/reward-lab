@@ -67,3 +67,10 @@ deterministic final-checkpoint evaluation and seed-level statistics. Main
 limitations are hand-built layouts (layout and horizon are confounded), only
 three H10 seeds, limited noisy-signal settings, no aggregate reward-vs-step
 graph, and no universal reward-ranking claim outside this task.
+
+The checkpoint-based sample-efficiency table is
+`runs/final_summary/auc_convergence_summary.csv`: it reports normalized AUC and
+the first deterministic checkpoint at 25/50/75/90% success. Checkpoints are
+saved every 10k steps, so any reported 10k crossing means "at or before the
+first saved checkpoint," not an exact crossing time. The matching per-run file
+is `runs/final_summary/auc_convergence_per_run.csv`.

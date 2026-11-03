@@ -14,12 +14,12 @@ scope, replication, or artifact gap; **not done** has no adequate evidence.
 | Reward components independently logged | done | `reward_rl/training/callbacks.py`, TensorBoard logs in `runs/*/tb_logs/` | No consolidated component plot for every experiment. |
 | PPO trains all primary variants | done | `runs/{sparse,dense,potential,hybrid}/seed_*/results.json` | Results are task-specific. |
 | Multiple random seeds evaluated | done | `runs/stage4_10seed_final_checkpoint/`, `runs/stage8/analysis/` | H10 remains only three seeds. |
-| Quantitative sample efficiency | partial | `runs/final_summary/auc_convergence_summary.csv`, `runs/final_summary/normalised_auc_by_horizon.png` | AUC and 90% convergence are now consolidated, but 25/50/75 thresholds are absent. |
+| Quantitative sample efficiency | done | `runs/final_summary/auc_convergence_summary.csv`, `runs/final_summary/normalised_auc_by_horizon.png` | Checkpoint spacing makes 10k a threshold-crossing floor. |
 | Long-horizon scaling | partial | `runs/stage8/analysis/horizon_comparison_summary.csv`, Stage 7 layouts | One hand-built layout per length confounds layout and horizon. |
 | Reward-hacking tests | done | `runs/stage5_reward_hacking/audit_results.json`, `runs/stage5c_weight_sweep_audit/audit_results.json` | Scripted stress cases are not an exhaustive exploit search. |
 | Reward-to-success correlation | done | `runs/stage4_reward_vs_success/*_proxy_reward_vs_success.png`, `runs/stage8/analysis/reward_indistinguishable_summary.csv` | Training-time correlation remains observational. |
 | Ablations identify useful components | partial | `runs/stage8b/analysis/ablation_10seed_summary.csv`, `ablation_10seed_tests.csv` | No effect survives 10-way Holm; terminal removal is suggestive only. |
-| Validated reward-shaping recipe with limitations | partial | `docs/FINDINGS.md` | `docs/RECIPE.md` was requested for audit but is absent from this worktree; no audited decision-tree artifact is available. |
+| Validated reward-shaping recipe with limitations | done | `docs/RECIPE.md`, `docs/FINDINGS.md` | Scope remains one task family and PPO; limitations are stated in the recipe. |
 
 ## Section 19 experiments
 
@@ -39,18 +39,18 @@ scope, replication, or artifact gap; **not done** has no adequate evidence.
 | Requirement | Status | Evidence file | Gap |
 | --- | --- | --- | --- |
 | Final success / seed variance | done | `runs/stage8b/analysis/horizon_comparison_summary.csv` | H10 only n=3. |
-| Steps to target success | partial | `runs/stage8b/analysis/per_seed_evaluations.csv` | Only 90% threshold. |
+| Steps to target success | done | `runs/final_summary/auc_convergence_per_run.csv` | 25/50/75/90 are checkpoint-resolution floors. |
 | AUC / episodes to convergence | done | `runs/final_summary/auc_convergence_summary.csv`, `runs/final_summary/normalised_auc_by_horizon.png` | Checkpoint-based deterministic AUC; unavailable convergence is explicitly counted. |
 | Episode length / planning efficiency | partial | `runs/stage8b/analysis/raw_evaluations.json`, `runs/stage6_zero_shot/per_seed.csv` | Planning-efficiency comparison not consolidated. |
 | Invalid action / subgoal rate | partial | `runs/stage4_analysis/stage4_invalid_action_rate.png`, TensorBoard logs | No all-stage aggregate. |
 | Reward-success correlation / hacking incidence | done | `runs/stage4_reward_vs_success/`, `runs/stage8/analysis/reward_indistinguishable_summary.csv` | Correlation is task-specific. |
 | Success vs environment steps graph | done | `runs/stage7/final/learning_curve_h50.png` | Not one pooled all-stage graph. |
-| Mean reward vs steps graph | not done | -- | Missing. |
+| Mean reward vs steps graph | done | `runs/final_summary/mean_episode_reward_vs_steps.png` | Raw reward scales differ across reward functions; figure warns against cross-variant comparison. |
 | Sample-efficiency comparison graph | partial | `runs/stage8/analysis/steps_to_90_vs_horizon.png` | It is horizon-oriented, not one base comparison. |
 | Threshold graph | partial | `runs/stage8/analysis/stage4_steps_to_90_checkpoint.csv` | 25/50/75 omitted. |
 | Reward vs success scatter | done | `runs/stage4_reward_vs_success/dense_proxy_reward_vs_success.png` | Additional variants in same directory. |
 | Horizon learning curves | done | `runs/stage7/final/learning_curve_h10.png` | n=3 at H10. |
-| Component-contribution graph | partial | TensorBoard component scalars in `runs/*/tb_logs/` | No saved aggregate plot. |
+| Component-contribution graph | partial | `runs/final_summary/base_reward_component_contributions.png`, `reward_component_log_coverage.csv` | Base dense/hybrid/potential only; only per-step window means remain, not episode-level component returns. |
 | Invalid-action graph | done | `runs/stage4_analysis/stage4_invalid_action_rate.png` | Stage 4 only. |
 | Reward-hacking examples | done | `runs/stage5c_weight_sweep_audit/*_proxy_vs_success.png`, `runs/stage5c_weight_sweep_final/*_hacking_replay.gif` | Scripted cases. |
 
